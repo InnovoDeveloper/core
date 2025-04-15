@@ -61,7 +61,15 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 def getDeviceName(ip_address):
     """Get Shelly Gen1 Device Name via raw TCP HTTP."""
-    msg = f"GET /settings HTTP/1.1\r\nHost: {ip_address}\r\nConnection: close\r\n\r\n"
+    # msg = f"GET /settings HTTP/1.1\r\nHost: {ip_address}\r\nConnection: close\r\n\r\n"
+    msg = (
+        "POST /rpc/Shelly.GetConfig HTTP/1.1\r\n"
+        f"Host: {ip_address}\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+    )
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
