@@ -1014,6 +1014,7 @@ build.json @home-assistant/supervisor
 /tests/components/netgear_lte/ @tkdrob
 /homeassistant/components/network/ @home-assistant/core
 /tests/components/network/ @home-assistant/core
+/homeassistant/components/newshellylight/ @InnovoDeveloper
 /homeassistant/components/nexia/ @bdraco
 /tests/components/nexia/ @bdraco
 /homeassistant/components/nextbus/ @vividboarder

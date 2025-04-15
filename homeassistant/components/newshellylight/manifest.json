@@ -1,0 +1,10 @@
+{
+  "domain": "newshellylight",
+  "name": "Shelly_Lighting",
+  "codeowners": ["@InnovoDeveloper"],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/newshellylight",
+  "iot_class": "local_push",
+  "quality_scale": "bronze",
+  "requirements": []
+}

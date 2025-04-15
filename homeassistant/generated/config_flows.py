@@ -413,6 +413,7 @@ FLOWS = {
         "netatmo",
         "netgear",
         "netgear_lte",
+        "newshellylight",
         "nexia",
         "nextbus",
         "nextcloud",
