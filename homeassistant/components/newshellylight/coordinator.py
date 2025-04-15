@@ -5,7 +5,6 @@ from collections.abc import Callable
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -37,7 +36,7 @@ class ShellyCoordinator(DataUpdateCoordinator[list[ShellyLight]]):
         self._controller = ShellyLightController(
             loop=hass.loop,
             port=PORT,
-            ip_address=config_entry.data[CONF_HOST],
+            ip_address=config_entry.data["IP Address"],
             discovery_enabled=True,
             discovery_interval=CONNECTION_TIMEOUT,
             discovered_callback=None,

@@ -7,7 +7,7 @@ from contextlib import suppress
 from errno import EADDRINUSE
 import logging
 
-from homeassistant.const import CONF_HOST, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ShellyLightConfigEntry) -> bool:
     """Set up Shelly_Lighting from a config entry."""
 
-    ip_address = entry.data[CONF_HOST]
+    ip_address = entry.data["IP Address"]
     hass.data[DOMAIN] = {"ip": ip_address}
 
     _LOGGER.log(logging.INFO, "async_setup_entry")

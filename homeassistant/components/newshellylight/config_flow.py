@@ -5,13 +5,11 @@ from __future__ import annotations
 import logging
 import socket
 
-# import aiohttp
 import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_HOST
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
@@ -30,10 +28,13 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         """Step User."""
-        host = CONF_HOST
+        # host = CONF_HOST
+        host = user_input
         # Specify items in the order they are to be displayed in the UI
         try:
             if user_input is not None:
+                # ip_address = user_input["IP Address"]
+
                 deviceName = getDeviceName(user_input["IP Address"])
                 _LOGGER.log(logging.INFO, "deviceName %s", str(deviceName))
                 # if not deviceName:
@@ -42,7 +43,7 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # return self.async_create_entry(title=deviceName, data=user_input)
                 return self.async_create_entry(
-                    title=f"Shelly @ {host}", data={CONF_HOST: host}
+                    title=f"Shelly @ {host}", data=user_input
                 )
             return self.async_show_form(
                 step_id="user",
@@ -58,18 +59,19 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 def getDeviceName(ip_address):
-    """Get Num of inputs."""
+    """Get Device Name."""
     _LOGGER.log(logging.INFO, "getDeviceName")
-
     _LOGGER.log(logging.INFO, "Connect to %s", ip_address)
     # msg = "get /rpc/Shelly.GetConfig\n"
     mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Define the URL you want to send a GET request to
-    url = f"http://{ip_address}/rpc/Shelly.GetConfig"
+    # url = f"http://{ip_address}/rpc/Shelly.GetConfig"
+    msg = "get settings\n"
+
     address = (ip_address, int(PORT))
     try:
         mySocket.connect(address)
-        mySocket.send(url.encode())
+        mySocket.send(msg.encode())
         # while True:
         data = mySocket.recv(2048)
         # Send the GET request
@@ -95,9 +97,11 @@ def getDeviceName(ip_address):
         address = (ip_address, PORT)
     try:
         mySocket.connect(address)
-        mySocket.send(url.encode())
+        mySocket.send(msg.encode())
         # while True:
         data = mySocket.recv(2048)
+        _LOGGER.log(logging.INFO, "response data: %s", str(data))
+
         if data:
             _LOGGER.log(logging.INFO, "response data: %s", str(data))
             data = data.decode()
