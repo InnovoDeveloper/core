@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import socket
 
-import requests
+# import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -59,60 +60,36 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 def getDeviceName(ip_address):
-    """Get Device Name."""
-    _LOGGER.log(logging.INFO, "getDeviceName")
-    _LOGGER.log(logging.INFO, "Connect to %s", ip_address)
-    # msg = "get /rpc/Shelly.GetConfig\n"
-    mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Define the URL you want to send a GET request to
-    # url = f"http://{ip_address}/rpc/Shelly.GetConfig"
-    msg = "get settings\n"
+    """Get Shelly Gen1 Device Name via raw TCP HTTP."""
+    msg = f"GET /settings HTTP/1.1\r\nHost: {ip_address}\r\nConnection: close\r\n\r\n"
 
-    address = (ip_address, int(PORT))
     try:
-        mySocket.connect(address)
-        mySocket.send(msg.encode())
-        # while True:
-        data = mySocket.recv(2048)
-        # Send the GET request
-        # response = requests.get(url, timeout=5)
-        _LOGGER.log(logging.INFO, "response data: %s", str(data))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5)
+            s.connect((ip_address, PORT))
+            s.sendall(msg.encode())
 
-        if data:
-            _LOGGER.log(logging.INFO, "response data: %s", str(data))
-            data = data.decode()
-            # deviceName = "ShellyDevice"
+            response = b""
+            while True:
+                try:
+                    part = s.recv(2048)
+                    if not part:
+                        break
+                    response += part
+                except TimeoutError:
+                    break
 
-            # return deviceName
-        # Check if the request was successful (status code 200)
-    # if response.status_code == 200:
-    # Parse the JSON response
-    # data = response.json()
-    # _LOGGER.log(logging.INFO, "response data: %s", str(data))
-    # else:
-    # _LOGGER.log(logging.INFO, "response data: %s", response.status_code)
-    except requests.RequestException:
-        # in your case, ip address: shelly ip, port: 80
-        # msg = "get /settings\n"
-        address = (ip_address, PORT)
-    try:
-        mySocket.connect(address)
-        mySocket.send(msg.encode())
-        # while True:
-        data = mySocket.recv(2048)
-        _LOGGER.log(logging.INFO, "response data: %s", str(data))
+        response_str = response.decode(errors="ignore")
+        _LOGGER.info("Raw response from device: %s", response_str)
 
-        if data:
-            _LOGGER.log(logging.INFO, "response data: %s", str(data))
-            data = data.decode()
-            # deviceName = data.replace("/amp/deviceInfo/deviceName", "")
-            # deviceName = deviceName.replace("\n", "")
-            # deviceName = deviceName.replace('"', "")
-            data = "test"
-            mySocket.close()
-
-            return ""
-    except (TimeoutError, OSError, ConnectionRefusedError):
-        return False
-    finally:
-        mySocket.close()
+        if "\r\n\r\n" in response_str:
+            json_data = response_str.split("\r\n\r\n", 1)[1]
+            try:
+                parsed = json.loads(json_data)
+                return parsed.get("name", "Shelly Device")
+            except json.JSONDecodeError:
+                _LOGGER.warning("Failed to parse JSON from Shelly: %s", json_data)
+                return None
+    except (TimeoutError, OSError, ConnectionRefusedError) as e:
+        _LOGGER.warning("Could not connect to Shelly device at %s: %s", ip_address, e)
+        return None
