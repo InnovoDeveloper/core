@@ -60,44 +60,45 @@ class ShellyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 def getDeviceName(ip_address):
-    """Get Shelly Gen1 Device Name via raw TCP HTTP."""
-    # msg = f"GET /settings HTTP/1.1\r\nHost: {ip_address}\r\nConnection: close\r\n\r\n"
-    msg = (
-        "POST /rpc/Shelly.GetConfig HTTP/1.1\r\n"
+    """Get Shelly Gen2 device name using Shelly.GetConfig RPC."""
+
+    body = "{}"
+    encoded_body = body.encode()
+
+    request = (
+        f"POST /rpc/Shelly.GetConfig HTTP/1.1\r\n"
         f"Host: {ip_address}\r\n"
         "Content-Type: application/json\r\n"
-        "Content-Length: 0\r\n"
+        f"Content-Length: {len(encoded_body)}\r\n"
         "Connection: close\r\n"
         "\r\n"
-    )
+    ).encode() + encoded_body
 
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)
-            s.connect((ip_address, PORT))
-            s.sendall(msg.encode())
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(5)
+        s.connect((ip_address, 80))
+        s.sendall(request)
 
-            response = b""
-            while True:
-                try:
-                    part = s.recv(2048)
-                    if not part:
-                        break
-                    response += part
-                except TimeoutError:
-                    break
-
-        response_str = response.decode(errors="ignore")
-        _LOGGER.info("Raw response from device: %s", response_str)
-
-        if "\r\n\r\n" in response_str:
-            json_data = response_str.split("\r\n\r\n", 1)[1]
+        response = b""
+        while True:
             try:
-                parsed = json.loads(json_data)
-                return parsed.get("name", "Shelly Device")
-            except json.JSONDecodeError:
-                _LOGGER.warning("Failed to parse JSON from Shelly: %s", json_data)
-                return None
-    except (TimeoutError, OSError, ConnectionRefusedError) as e:
-        _LOGGER.warning("Could not connect to Shelly device at %s: %s", ip_address, e)
-        return None
+                part = s.recv(2048)
+                if not part:
+                    break
+                response += part
+            except TimeoutError:
+                break
+
+    response_str = response.decode(errors="ignore")
+    _LOGGER.info("Raw response from device: %s", response_str)
+
+    if "\r\n\r\n" in response_str:
+        json_data = response_str.split("\r\n\r\n", 1)[1]
+        try:
+            parsed = json.loads(json_data)
+            _LOGGER.info("Parsed JSON from device: %s", parsed)
+            return parsed.get("device", {}).get("name", "Shelly Device")
+        except json.JSONDecodeError:
+            _LOGGER.warning("Failed to parse JSON: %s", json_data)
+            return None
+    return None
