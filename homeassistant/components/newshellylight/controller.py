@@ -70,7 +70,6 @@ class ShellyLightController:
         await self.createConnection()
         config = send_rpc_request(self._ip_address, "Shelly.GetConfig")
         self._num_of_zones = self.create_lights_from_config(self, config)
-
         if self._light_discovered_callback:
             for light in self._num_of_zones.values():
                 self._light_discovered_callback(light, True)
@@ -142,7 +141,7 @@ class ShellyLightController:
     def lights(self) -> list[ShellyLight]:
         """Return lights."""
         _LOGGER.log(logging.INFO, "controller lights")
-        return list(self.lights)
+        return list(self._num_of_zones.values())
 
     async def turn_on_off(self, zone_id: str, status: str):
         """Turn on off."""
