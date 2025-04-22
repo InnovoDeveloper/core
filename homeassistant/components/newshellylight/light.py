@@ -1,4 +1,4 @@
-"""LEA Zone Structure."""
+"""Shelly Light Structure."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 class ShellyLight:
     """ShellyLight."""
 
-    def __init__(self, controller, light_id: str) -> None:
+    def __init__(self, controller, light_id: str, data: dict) -> None:
         """Init."""
         self._controller = controller
         self._lastseen: datetime = datetime.now()
@@ -20,11 +20,34 @@ class ShellyLight:
         self._turn_off: bool = False
         self._turn_on: bool = False
         self._light_id = light_id
+        self._name = data.get("name", f"Shelly Light {light_id}")
+        # self._attr_unique_id = f"shelly_{coordinator.mac}_{light_id}"
 
         self._source: str = ""
         self._sourcesList: list[str] = []
         self._update_callback: Callable[[ShellyLight], None] | None = None
-        self.is_manual: bool = False
+        self._is_on = data.get("initial_state") == "on"
+        self._lastseen = datetime.now()
+
+    @property
+    def name(self) -> str:
+        """Name."""
+        return self._name
+
+    @property
+    def is_on(self) -> bool:
+        """Is On."""
+        return self._is_on
+
+    @property
+    def controller(self):
+        """Controller."""
+        return self._controller
+
+    @property
+    def light_id(self) -> str:
+        """Light Id."""
+        return self._light_id
 
     @property
     def update_callback(
@@ -41,41 +64,6 @@ class ShellyLight:
         old_callback = self._update_callback
         self._update_callback = callback
         return old_callback
-
-    @property
-    def controller(self):
-        """Controller."""
-        return self._controller
-
-    @property
-    def light_id(self) -> str:
-        """Light Id."""
-        return self._light_id
-
-    @property
-    def model(self) -> str:
-        """Model."""
-        return self._model
-
-    @property
-    def turn_on(self) -> bool:
-        """turn_on."""
-        return self._turn_on
-
-    @property
-    def turn_off(self) -> bool:
-        """turn_off."""
-        return self._turn_off
-
-    @property
-    def source(self) -> str:
-        """Source."""
-        return self._source
-
-    @property
-    def sourcesList(self) -> list[str]:
-        """Sources list."""
-        return self._sourcesList
 
     def update(self, value: str, commandType: str):
         """Update light."""
@@ -100,11 +88,11 @@ class ShellyLight:
         # _LOGGER.log(logging.INFO, "last seen: %s", str(self._lastseen))
 
     async def set_light_on(self, _turn_on: bool) -> None:
-        """Set Zone Power."""
+        """Set Power."""
         await self._controller.turn_on(self._light_id, str(_turn_on))
         self._turn_on = _turn_on
 
     async def set_light_off(self, _turn_off: bool) -> None:
-        """Set Zone Power."""
+        """Set Power."""
         await self._controller.turn_off(self.light_id, str(_turn_off))
         self._turn_off = _turn_off

@@ -10,6 +10,7 @@ from typing import Any
 
 from .const import DISCOVERY_INTERVAL, PORT, UPDATE_INTERVAL
 from .light import ShellyLight
+from .rpc import send_rpc_request
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class ShellyLightController:
 
         self._transport: Any = None
         self._protocol = None
+        self._model: str = ""
 
         self._port = port
         self._ip_address = ip_address
@@ -56,7 +58,6 @@ class ShellyLightController:
 
     async def createConnection(self):
         """Create Connection."""
-
         self._transport = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         address = (self._ip_address, int(self._port))
         self._transport.connect(address)
@@ -67,6 +68,29 @@ class ShellyLightController:
     async def start(self):
         """Start."""
         await self.createConnection()
+        config = send_rpc_request(self._ip_address, "Shelly.GetConfig")
+        self._num_of_zones = self.create_lights_from_config(self, config)
+
+        if self._light_discovered_callback:
+            for light in self._num_of_zones.values():
+                self._light_discovered_callback(light, True)
+
+    def create_lights_from_config(
+        self, controller, config: dict
+    ) -> dict[int, ShellyLight]:
+        """Create Light Entities."""
+        lights = {}
+        for key, value in config.items():
+            if key.startswith("switch:"):
+                switch_id = int(key.split(":")[1])
+                light = ShellyLight(controller, str(switch_id), value)
+                # light._model = config["sys"]["mac"]
+                # Set state
+                light.update(
+                    "true" if value["initial_state"] == "on" else "false", "turn_on"
+                )
+                lights[switch_id] = light
+        return lights
 
     def send_update_message(self) -> None:
         """Send Update Message."""
@@ -92,16 +116,33 @@ class ShellyLightController:
         self._light_discovered_callback = callback
         return old_callback
 
+    async def turn_on(self, light_id: str, _value: str):
+        """Turn on."""
+        send_rpc_request(
+            self._ip_address, "Switch.Set", {"id": int(light_id), "on": True}
+        )
+
+    async def turn_off(self, light_id: str, _value: str):
+        """Turn Off."""
+        send_rpc_request(
+            self._ip_address, "Switch.Set", {"id": int(light_id), "on": False}
+        )
+
     @property
-    def discovered_zones(self) -> dict[int, ShellyLight]:
-        """Return number of zones."""
-        return self._num_of_zones
+    def model(self) -> str:
+        """Get model."""
+        return self._model
+
+    @model.setter
+    def model(self, value: str) -> None:
+        """Set model."""
+        self._model = value
 
     @property
     def lights(self) -> list[ShellyLight]:
         """Return lights."""
         _LOGGER.log(logging.INFO, "controller lights")
-        return list(self.discovered_zones.values())
+        return list(self.lights)
 
     async def turn_on_off(self, zone_id: str, status: str):
         """Turn on off."""

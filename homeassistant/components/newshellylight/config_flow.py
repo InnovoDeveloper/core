@@ -97,6 +97,11 @@ def getDeviceName(ip_address):
         try:
             parsed = json.loads(json_data)
             _LOGGER.info("Parsed JSON from device: %s", parsed)
+            device_info = parsed.get("sys", {}).get("device", {})
+            name = device_info.get("name")
+            if not name:
+                mac = device_info.get("mac", "UNKNOWN")
+                name = f"Shelly-{mac[-6:]}" if mac != "UNKNOWN" else "Shelly Device"
             return parsed.get("device", {}).get("name", "Shelly Device")
         except json.JSONDecodeError:
             _LOGGER.warning("Failed to parse JSON: %s", json_data)
